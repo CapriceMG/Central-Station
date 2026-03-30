@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ReactNode } from "react";
 
 const PINK = "#f3e6f0";
 const ROSE = "#e8c5d8";
@@ -9,9 +9,9 @@ const TEXT = "#3d1f2f";
 const MUTED = "#9a7088";
 const WHITE = "#ffffff";
 
-const statusColors = { Applied: MAUVE, Interview: "#7ab87a", Researching: "#d4a853", Rejected: "#c47070", Offer: "#5b9bd4" };
-const priorityColors = { high: "#c47070", med: "#d4a853", low: "#7ab87a" };
-const tagColors = { Branding: MAUVE, Sales: "#7ab87a", Research: "#5b9bd4", Ops: "#d4a853" };
+const statusColors: Record<string, string> = { Applied: MAUVE, Interview: "#7ab87a", Researching: "#d4a853", Rejected: "#c47070", Offer: "#5b9bd4" };
+const priorityColors: Record<string, string> = { high: "#c47070", med: "#d4a853", low: "#7ab87a" };
+const tagColors: Record<string, string> = { Branding: MAUVE, Sales: "#7ab87a", Research: "#5b9bd4", Ops: "#d4a853" };
 
 const AFFIRMATIONS = [
   "You are already qualified for the room you're walking into.",
@@ -38,46 +38,47 @@ const HABITS = [
 
 const DAYS = ["M", "T", "W", "Th", "F", "Sa", "Su"];
 
-const defaultTasks = [
+interface Task { id: number; text: string; done: boolean; priority: string; }
+interface Job { id: number; company: string; role: string; status: string; date: string; }
+interface WellnessItem { id: number; label: string; value: number; max: number; unit: string; }
+interface BizItem { id: number; text: string; done: boolean; tag: string; }
+interface AiMessage { role: string; text: string; }
+interface Reflection { wins: string; challenges: string; focus: string; grateful: string; }
+
+const defaultTasks: Task[] = [
   { id: 1, text: "Review job applications", done: false, priority: "high" },
   { id: 2, text: "Update LinkedIn headline", done: false, priority: "med" },
   { id: 3, text: "Schedule therapy with Dr. Trina", done: true, priority: "high" },
   { id: 4, text: "File LLC documents for Precision Consulting", done: false, priority: "high" },
   { id: 5, text: "30-min walk", done: false, priority: "low" },
 ];
-const defaultJobs = [
+const defaultJobs: Job[] = [
   { id: 1, company: "TechCorp", role: "Director of HCM Operations", status: "Applied", date: "Mar 24" },
   { id: 2, company: "NovaPay", role: "Sr. Director, Payroll Strategy", status: "Interview", date: "Mar 26" },
   { id: 3, company: "WealthPath", role: "Director, Client Success", status: "Researching", date: "Mar 27" },
 ];
-const defaultWellness = [
+const defaultWellness: WellnessItem[] = [
   { id: 1, label: "Water intake", value: 5, max: 8, unit: "glasses" },
   { id: 2, label: "Sleep", value: 6.5, max: 8, unit: "hrs" },
   { id: 3, label: "Movement", value: 2, max: 5, unit: "days" },
   { id: 4, label: "Mood", value: 4, max: 5, unit: "/5" },
 ];
-const defaultBiz = [
+const defaultBiz: BizItem[] = [
   { id: 1, text: "Finalize Precision Consulting Group branding", done: false, tag: "Branding" },
   { id: 2, text: "Draft service offerings one-pager", done: false, tag: "Sales" },
   { id: 3, text: "Research small biz target clients in Atlanta", done: false, tag: "Research" },
   { id: 4, text: "Set up business email", done: true, tag: "Ops" },
 ];
 
-// Local storage helper
-function useLocalState(key, defaultValue) {
-  const [state, setState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : defaultValue;
-    } catch { return defaultValue; }
+function useLocalState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [state, setState] = useState<T>(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : defaultValue; } catch { return defaultValue; }
   });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(state)); } catch {} }, [key, state]);
   return [state, setState];
 }
 
-const Section = ({ title, icon, color, children }) => (
+const Section = ({ title, icon, color, children }: { title: string; icon: string; color: string; children: ReactNode }) => (
   <div style={{ background: WHITE, border: `1.5px solid ${color}`, borderRadius: 16, padding: "1.25rem", marginBottom: 16 }}>
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
       <span style={{ fontSize: 15 }}>{icon}</span>
@@ -87,11 +88,11 @@ const Section = ({ title, icon, color, children }) => (
   </div>
 );
 
-const Tag = ({ label, color }) => (
+const Tag = ({ label, color }: { label: string; color: string }) => (
   <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 20, background: color + "33", color, border: `1px solid ${color}66` }}>{label}</span>
 );
 
-const ProgressBar = ({ value, max }) => {
+const ProgressBar = ({ value, max }: { value: number; max: number }) => {
   const pct = Math.min(100, Math.round((value / max) * 100));
   return (
     <div style={{ flex: 1, height: 8, background: PINK, borderRadius: 99, overflow: "hidden" }}>
@@ -101,37 +102,37 @@ const ProgressBar = ({ value, max }) => {
 };
 
 export default function App() {
-  const [tasks, setTasks] = useLocalState("preicy_tasks", defaultTasks);
-  const [jobs, setJobs] = useLocalState("preicy_jobs", defaultJobs);
-  const [wellness, setWellness] = useLocalState("preicy_wellness", defaultWellness);
-  const [biz, setBiz] = useLocalState("preicy_biz", defaultBiz);
-  const [drops, setDrops] = useLocalState("preicy_drops", ["Call mom back this weekend", "Look into Atlanta BizLaunch networking event"]);
-  const [habitLog, setHabitLog] = useLocalState("preicy_habits", () => { const i = {}; HABITS.forEach(h => { i[h.id] = []; }); return i; });
-  const [reflection, setReflection] = useLocalState("preicy_reflection", { wins: "", challenges: "", focus: "", grateful: "" });
-  const [affIdx, setAffIdx] = useLocalState("preicy_aff", Math.floor(Math.random() * AFFIRMATIONS.length));
+  const [tasks, setTasks] = useLocalState<Task[]>("preicy_tasks", defaultTasks);
+  const [jobs, setJobs] = useLocalState<Job[]>("preicy_jobs", defaultJobs);
+  const [wellness, setWellness] = useLocalState<WellnessItem[]>("preicy_wellness", defaultWellness);
+  const [biz, setBiz] = useLocalState<BizItem[]>("preicy_biz", defaultBiz);
+  const [drops, setDrops] = useLocalState<string[]>("preicy_drops", ["Call mom back this weekend", "Look into Atlanta BizLaunch networking event"]);
+  const [habitLog, setHabitLog] = useLocalState<Record<number, number[]>>("preicy_habits", Object.fromEntries(HABITS.map(h => [h.id, []])));
+  const [reflection, setReflection] = useLocalState<Reflection>("preicy_reflection", { wins: "", challenges: "", focus: "", grateful: "" });
+  const [affIdx, setAffIdx] = useLocalState<number>("preicy_aff", Math.floor(Math.random() * AFFIRMATIONS.length));
+  const [aiMessages, setAiMessages] = useLocalState<AiMessage[]>("preicy_ai", [{ role: "assistant", text: "Hi Preicy! I'm your dashboard assistant. Ask me to add tasks, update job statuses, log wellness, or anything else. ✨" }]);
 
   const [newTask, setNewTask] = useState("");
   const [newJob, setNewJob] = useState({ company: "", role: "", status: "Applied" });
   const [newBiz, setNewBiz] = useState("");
   const [dropZone, setDropZone] = useState("");
   const [aiInput, setAiInput] = useState("");
-  const [aiMessages, setAiMessages] = useLocalState("preicy_ai", [{ role: "assistant", text: "Hi Preicy! I'm your dashboard assistant. Ask me to add tasks, update job statuses, log wellness, or anything else. ✨" }]);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAi, setShowAi] = useState(false);
-  const chatRef = useRef(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [aiMessages]);
 
-  const toggleTask = id => setTasks(t => t.map(x => x.id === id ? { ...x, done: !x.done } : x));
-  const toggleBiz = id => setBiz(b => b.map(x => x.id === id ? { ...x, done: !x.done } : x));
+  const toggleTask = (id: number) => setTasks(t => t.map(x => x.id === id ? { ...x, done: !x.done } : x));
+  const toggleBiz = (id: number) => setBiz(b => b.map(x => x.id === id ? { ...x, done: !x.done } : x));
   const addTask = () => { if (!newTask.trim()) return; setTasks(t => [...t, { id: Date.now(), text: newTask, done: false, priority: "med" }]); setNewTask(""); };
   const addJob = () => { if (!newJob.company.trim() || !newJob.role.trim()) return; setJobs(j => [...j, { ...newJob, id: Date.now(), date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }) }]); setNewJob({ company: "", role: "", status: "Applied" }); };
   const addBiz = () => { if (!newBiz.trim()) return; setBiz(b => [...b, { id: Date.now(), text: newBiz, done: false, tag: "Ops" }]); setNewBiz(""); };
-  const updateWellness = (id, val) => setWellness(w => w.map(x => x.id === id ? { ...x, value: +val } : x));
-  const updateJobStatus = (id, status) => setJobs(j => j.map(x => x.id === id ? { ...x, status } : x));
+  const updateWellness = (id: number, val: string) => setWellness(w => w.map(x => x.id === id ? { ...x, value: +val } : x));
+  const updateJobStatus = (id: number, status: string) => setJobs(j => j.map(x => x.id === id ? { ...x, status } : x));
   const saveDrop = () => { if (!dropZone.trim()) return; setDrops(d => [dropZone.trim(), ...d]); setDropZone(""); };
-  const removeDrop = i => setDrops(d => d.filter((_, idx) => idx !== i));
-  const toggleHabit = (hid, day) => setHabitLog(log => { const curr = log[hid] || []; return { ...log, [hid]: curr.includes(day) ? curr.filter(d => d !== day) : [...curr, day] }; });
+  const removeDrop = (i: number) => setDrops(d => d.filter((_, idx) => idx !== i));
+  const toggleHabit = (hid: number, day: number) => setHabitLog(log => { const curr = log[hid] || []; return { ...log, [hid]: curr.includes(day) ? curr.filter((d: number) => d !== day) : [...curr, day] }; });
   const nextAff = () => setAffIdx(i => (i + 1) % AFFIRMATIONS.length);
 
   const sendAi = async () => {
@@ -159,16 +160,16 @@ Always include a warm, concise message. If no action needed, just respond helpfu
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: systemPrompt, messages: [{ role: "user", content: userMsg }] })
       });
       const data = await res.json();
-      const raw = data.content?.[0]?.text || "I couldn't process that!";
+      const raw: string = data.content?.[0]?.text || "I couldn't process that!";
       const lines = raw.split("\n");
-      const actions = lines.filter(l => l.startsWith("ACTION:")).map(l => { try { return JSON.parse(l.replace("ACTION:", "").trim()); } catch { return null; } }).filter(Boolean);
-      const message = lines.filter(l => !l.startsWith("ACTION:")).join(" ").trim();
-      actions.forEach(a => {
+      const actions = lines.filter((l: string) => l.startsWith("ACTION:")).map((l: string) => { try { return JSON.parse(l.replace("ACTION:", "").trim()); } catch { return null; } }).filter(Boolean);
+      const message = lines.filter((l: string) => !l.startsWith("ACTION:")).join(" ").trim();
+      actions.forEach((a: Record<string, string>) => {
         if (a.type === "add_task") setTasks(t => [...t, { id: Date.now(), text: a.text, done: false, priority: a.priority || "med" }]);
         if (a.type === "add_biz") setBiz(b => [...b, { id: Date.now(), text: a.text, done: false, tag: a.tag || "Ops" }]);
         if (a.type === "add_job") setJobs(j => [...j, { id: Date.now(), company: a.company, role: a.role, status: a.status || "Applied", date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }) }]);
         if (a.type === "update_job_status") setJobs(j => j.map(x => x.company.toLowerCase().includes(a.company.toLowerCase()) ? { ...x, status: a.status } : x));
-        if (a.type === "update_wellness") setWellness(w => w.map(x => x.label.toLowerCase().includes(a.label.toLowerCase()) ? { ...x, value: a.value } : x));
+        if (a.type === "update_wellness") setWellness(w => w.map(x => x.label.toLowerCase().includes(a.label.toLowerCase()) ? { ...x, value: Number(a.value) } : x));
         if (a.type === "add_drop") setDrops(d => [a.text, ...d]);
       });
       setAiMessages([...newHistory, { role: "assistant", text: message || "Done! Dashboard updated. ✨" }]);
@@ -183,7 +184,7 @@ Always include a warm, concise message. If no action needed, just respond helpfu
     return `${mon.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${sun.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   })();
 
-  const inputStyle = (borderColor) => ({ flex: 1, padding: "7px 10px", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 13, color: TEXT, outline: "none", background: WHITE });
+  const inputStyle = (borderColor: string): React.CSSProperties => ({ flex: 1, padding: "7px 10px", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 13, color: TEXT, outline: "none", background: WHITE });
 
   return (
     <div style={{ background: SOFT, minHeight: "100vh", padding: "1.25rem", fontFamily: "system-ui, sans-serif", color: TEXT, maxWidth: 680, margin: "0 auto" }}>
@@ -192,7 +193,7 @@ Always include a warm, concise message. If no action needed, just respond helpfu
         <div style={{ fontSize: 22, fontWeight: 600, color: DEEP }}>Preicy's Dashboard</div>
         <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>Week of {week}</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-          {[{ label: `${tasks.filter(t=>t.done).length}/${tasks.length} tasks done`, c: MAUVE }, { label: `${jobs.length} roles tracked`, c: "#5b9bd4" }, { label: `${biz.filter(b=>b.done).length}/${biz.length} biz items`, c: "#7ab87a" }].map(b => (
+          {[{ label: `${tasks.filter(t => t.done).length}/${tasks.length} tasks done`, c: MAUVE }, { label: `${jobs.length} roles tracked`, c: "#5b9bd4" }, { label: `${biz.filter(b => b.done).length}/${biz.length} biz items`, c: "#7ab87a" }].map(b => (
             <span key={b.label} style={{ fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 20, background: b.c + "22", color: b.c, border: `1px solid ${b.c}55` }}>{b.label}</span>
           ))}
         </div>
@@ -334,12 +335,12 @@ Always include a warm, concise message. If no action needed, just respond helpfu
 
       <Section title="Weekly Reflection" icon="✦" color={ROSE}>
         <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>Take a moment. You deserve it. 💕</div>
-        {[
+        {([
           { key: "wins", label: "This week's wins", placeholder: "What did you accomplish? (big or small)" },
           { key: "challenges", label: "Challenges I faced", placeholder: "What was hard? No judgment." },
           { key: "focus", label: "Next week I'll focus on", placeholder: "One or two intentions..." },
           { key: "grateful", label: "I'm grateful for", placeholder: "Something good, however small..." },
-        ].map(({ key, label, placeholder }) => (
+        ] as { key: keyof Reflection; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
           <div key={key} style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: DEEP, marginBottom: 4 }}>{label}</div>
             <textarea value={reflection[key]} onChange={e => setReflection(r => ({ ...r, [key]: e.target.value }))} placeholder={placeholder} rows={2} style={{ width: "100%", padding: "8px 10px", border: `1px solid ${ROSE}`, borderRadius: 8, fontSize: 13, color: TEXT, resize: "vertical", outline: "none", fontFamily: "system-ui, sans-serif", background: WHITE, boxSizing: "border-box" }} />
